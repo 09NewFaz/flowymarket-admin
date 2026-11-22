@@ -56,6 +56,7 @@ export async function renderDesign(main) {
         <div class="ed-tabs" role="tablist">
           <button data-tab="blocks">Bloques</button>
           <button data-tab="global">Global</button>
+          <button data-tab="anim">Animaciones</button>
           <button data-tab="preview" class="only-sm">Vista previa</button>
         </div>
       </div>
@@ -107,6 +108,7 @@ function setTab(t) {
   $('.editor').classList.toggle('show-preview', t === 'preview');
   if (t === 'blocks') renderBlocks();
   if (t === 'global') renderGlobal();
+  if (t === 'anim') renderAnimations();
 }
 
 function change({ rerender = false } = {}) {
@@ -120,7 +122,11 @@ function change({ rerender = false } = {}) {
   const disc = $('[data-discard]');
   if (disc) disc.hidden = false;
   pushPreview();
-  if (rerender) (tab === 'global' ? renderGlobal : renderBlocks)();
+  if (rerender) {
+    if (tab === 'global') renderGlobal();
+    else if (tab === 'anim') renderAnimations();
+    else renderBlocks();
+  }
 }
 
 async function publish() {
@@ -972,8 +978,6 @@ function addBlockMenu() {
 // ================= Global =================
 function renderGlobal() {
   const d = draft.design;
-  d.animations = { intro: 'none', entrance: 'none', speed: 'normal', hover: 'none', heroMotion: 'none', ...(d.animations || {}) };
-  const anim = d.animations;
   const body = $('#ed-body');
   FONTS.forEach(loadFont);
   body.innerHTML = `
@@ -1017,50 +1021,6 @@ function renderGlobal() {
           <button data-bgtint="dark" class="${d.background.tint !== 'light' ? 'active' : ''}">Aa Oscuro</button>
           <button data-bgtint="light" class="${d.background.tint === 'light' ? 'active' : ''}">Aa Claro</button></div></div>`
         : '<p class="hint">El fondo usa tu color secundario.</p>'}
-    </div>
-    <div class="ed-section"><h4>Animaciones</h4>
-      <p class="hint" style="margin:-4px 0 12px">Agrega efectos al entrar a tu tienda, al desplazarse y al interactuar con tus productos.</p>
-      <div class="field"><label>Pantalla de bienvenida (al entrar)</label>
-        <select data-anim="intro">
-          <option value="none" ${anim.intro === 'none' ? 'selected' : ''}>Ninguna</option>
-          <option value="logo-fade" ${anim.intro === 'logo-fade' ? 'selected' : ''}>Logo con aparición suave</option>
-          <option value="curtain" ${anim.intro === 'curtain' ? 'selected' : ''}>Cortina hacia arriba</option>
-          <option value="logo-zoom" ${anim.intro === 'logo-zoom' ? 'selected' : ''}>Zoom del logo</option>
-        </select>
-      </div>
-      <div class="field"><label>Entrada de secciones y bloques</label>
-        <select data-anim="entrance">
-          <option value="none" ${anim.entrance === 'none' ? 'selected' : ''}>Ninguna</option>
-          <option value="fade" ${anim.entrance === 'fade' ? 'selected' : ''}>Aparecer suave</option>
-          <option value="slide-up" ${anim.entrance === 'slide-up' ? 'selected' : ''}>Deslizar desde abajo</option>
-          <option value="slide-left" ${anim.entrance === 'slide-left' ? 'selected' : ''}>Deslizar desde la izquierda</option>
-          <option value="zoom" ${anim.entrance === 'zoom' ? 'selected' : ''}>Zoom suave</option>
-          <option value="blur" ${anim.entrance === 'blur' ? 'selected' : ''}>Desenfocar a nítido</option>
-        </select>
-      </div>
-      <div class="field"><label>Velocidad</label>
-        <div class="choice">
-          <button data-anim-speed="fast" class="${anim.speed === 'fast' ? 'active' : ''}">Rápida</button>
-          <button data-anim-speed="normal" class="${!anim.speed || anim.speed === 'normal' ? 'active' : ''}">Normal</button>
-          <button data-anim-speed="slow" class="${anim.speed === 'slow' ? 'active' : ''}">Suave</button>
-        </div>
-      </div>
-      <div class="field"><label>Efecto al pasar el mouse (tarjetas y botones)</label>
-        <select data-anim="hover">
-          <option value="none" ${anim.hover === 'none' ? 'selected' : ''}>Ninguno</option>
-          <option value="lift" ${anim.hover === 'lift' ? 'selected' : ''}>Elevar con sombra</option>
-          <option value="scale" ${anim.hover === 'scale' ? 'selected' : ''}>Escala suave</option>
-          <option value="glow" ${anim.hover === 'glow' ? 'selected' : ''}>Brillo con color primario</option>
-        </select>
-      </div>
-      <div class="field"><label>Movimiento en la presentación (Hero)</label>
-        <select data-anim="heroMotion">
-          <option value="none" ${anim.heroMotion === 'none' ? 'selected' : ''}>Ninguno</option>
-          <option value="ken-burns" ${anim.heroMotion === 'ken-burns' ? 'selected' : ''}>Zoom lento (Ken Burns)</option>
-          <option value="float" ${anim.heroMotion === 'float' ? 'selected' : ''}>Flotar suave en logo/imagen</option>
-        </select>
-      </div>
-      <button type="button" class="btn ghost sm block" data-replay-anim>Probar animaciones en vista previa</button>
     </div>`;
 
   $$('[data-pal]', body).forEach((b) => (b.onclick = () => {
@@ -1088,24 +1048,135 @@ function renderGlobal() {
   if (ov) ov.addEventListener('input', () => { d.background.overlay = Number(ov.value); ov.nextElementSibling.textContent = `${ov.value}%`; change(); });
   const vid = $('[data-bgvid]', body);
   if (vid) vid.addEventListener('input', () => { d.background.video = vid.value.trim(); change(); });
-  $$('[data-anim]', body).forEach((sel) => sel.addEventListener('change', () => {
-    d.animations[sel.dataset.anim] = sel.value;
-    change();
-    if (sel.dataset.anim === 'intro' || sel.dataset.anim === 'entrance') {
-      setTimeout(() => frame?.contentWindow?.postMessage({ type: 'fm-replay-anim' }, location.origin), 140);
-    }
-  }));
-  $$('[data-anim-speed]', body).forEach((btn) => (btn.onclick = () => {
-    d.animations.speed = btn.dataset.animSpeed;
-    change({ rerender: true });
-  }));
-  $('[data-replay-anim]', body).onclick = () => {
-    pushPreview(true);
-    setTimeout(() => frame?.contentWindow?.postMessage({ type: 'fm-replay-anim' }, location.origin), 120);
-  };
   bindImageFields(body, 'design', (name, url) => {
     if (name === 'globalLogo') draft.store.logo = url;
     else d.background.image = url;
     change();
   });
+}
+
+// ================= Animaciones =================
+function renderAnimations() {
+  const d = draft.design;
+  d.animations = {
+    intro: 'none', entrance: 'none', productAnim: 'none', hover: 'none',
+    heroMotion: 'none', ambient: 'none', scrollBar: false, speed: 'normal',
+    ...(d.animations || {}),
+  };
+  const a = d.animations;
+  const body = $('#ed-body');
+  const sel = (key, opts) => opts.map(([v, l]) => `<option value="${v}" ${a[key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
+
+  body.innerHTML = `
+    <p class="hint" style="margin:0 0 12px">Personaliza los efectos al entrar, al hacer scroll, en productos y el ambiente visual de tu tienda.</p>
+    <button type="button" class="btn sm block" data-replay-anim style="margin-bottom:14px">Probar animaciones en vista previa</button>
+
+    <div class="ed-group"><h5>Pantalla de bienvenida (al entrar)</h5>
+      <div class="field"><label>Estilo de intro</label>
+        <select data-anim="intro">${sel('intro', [
+          ['none', 'Ninguna'],
+          ['logo-fade', 'Logo con aparición suave'],
+          ['logo-zoom', 'Zoom cinematográfico del logo'],
+          ['curtain', 'Cortina hacia arriba'],
+          ['split', 'Puertas abiertas (Split)'],
+          ['circle', 'Revelado circular (Iris)'],
+          ['shimmer', 'Destello de luz en logo'],
+          ['ripple', 'Pulso con anillos expansivos'],
+          ['brand-wipe', 'Barrido con color primario'],
+        ])}</select>
+      </div>
+    </div>
+
+    <div class="ed-group"><h5>Entrada de secciones y bloques</h5>
+      <div class="field"><label>Animación al cargar y al hacer scroll</label>
+        <select data-anim="entrance">${sel('entrance', [
+          ['none', 'Ninguna'],
+          ['fade', 'Aparecer suave (Fade)'],
+          ['slide-up', 'Deslizar desde abajo'],
+          ['slide-down', 'Deslizar desde arriba'],
+          ['slide-left', 'Deslizar desde la izquierda'],
+          ['slide-right', 'Deslizar desde la derecha'],
+          ['zoom', 'Zoom suave hacia afuera'],
+          ['zoom-out', 'Zoom desde grande'],
+          ['blur', 'Desenfocar a nítido'],
+          ['flip', 'Giro 3D suave (Flip)'],
+          ['bounce', 'Rebote elástico (Pop)'],
+        ])}</select>
+      </div>
+      <div class="field"><label>Velocidad general</label>
+        <div class="choice">
+          <button data-anim-speed="fast" class="${a.speed === 'fast' ? 'active' : ''}">Rápida</button>
+          <button data-anim-speed="normal" class="${!a.speed || a.speed === 'normal' ? 'active' : ''}">Normal</button>
+          <button data-anim-speed="slow" class="${a.speed === 'slow' ? 'active' : ''}">Suave</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ed-group"><h5>Catálogo y tarjetas de producto</h5>
+      <div class="field"><label>Efecto en productos</label>
+        <select data-anim="productAnim">${sel('productAnim', [
+          ['none', 'Ninguno'],
+          ['cascade', 'Cascada escalonada al aparecer'],
+          ['img-zoom', 'Zoom suave en foto al pasar el mouse'],
+          ['shine', 'Destello diagonal al pasar el mouse'],
+          ['tilt', 'Inclinación sutil al pasar el mouse'],
+          ['badge-pulse', 'Pulso suave en etiquetas de oferta'],
+        ])}</select>
+      </div>
+      <div class="field"><label>Efecto Hover en tarjetas y botones</label>
+        <select data-anim="hover">${sel('hover', [
+          ['none', 'Ninguno'],
+          ['lift', 'Elevar con sombra'],
+          ['scale', 'Escala suave'],
+          ['glow', 'Brillo con color primario'],
+          ['border', 'Borde iluminado'],
+          ['btn-shine', 'Barrido de brillo en botones'],
+          ['pop', 'Rebote suave al pasar el mouse'],
+        ])}</select>
+      </div>
+    </div>
+
+    <div class="ed-group"><h5>Portada (Hero) y ambiente</h5>
+      <div class="field"><label>Movimiento en el Hero</label>
+        <select data-anim="heroMotion">${sel('heroMotion', [
+          ['none', 'Ninguno'],
+          ['ken-burns', 'Zoom lento en imagen (Ken Burns)'],
+          ['float', 'Flotar suave en logo e imagen'],
+          ['gradient-flow', 'Degradado animado vivo'],
+          ['cta-pulse', 'Latido suave en botón CTA'],
+          ['hero-stagger', 'Título y subtítulo escalonados'],
+        ])}</select>
+      </div>
+      <div class="field"><label>Efecto ambiental de fondo</label>
+        <select data-anim="ambient">${sel('ambient', [
+          ['none', 'Ninguno'],
+          ['particles', 'Partículas suaves flotantes'],
+          ['bubbles', 'Burbujas delicadas subiendo'],
+          ['sparkles', 'Destellos / estrellas sutiles'],
+          ['petals', 'Pétalos / nieve cayendo'],
+          ['aurora', 'Aurora suave con tu color'],
+        ])}</select>
+      </div>
+      ${swRow('data-anim-chk="scrollBar"', 'Barra de progreso de lectura', !!a.scrollBar, 'Muestra una línea fina arriba que avanza al bajar por la tienda.')}
+    </div>`;
+
+  const replay = () => {
+    pushPreview(true);
+    setTimeout(() => frame?.contentWindow?.postMessage({ type: 'fm-replay-anim' }, location.origin), 130);
+  };
+  $$('[data-anim]', body).forEach((el) => el.addEventListener('change', () => {
+    a[el.dataset.anim] = el.value;
+    change();
+    if (el.dataset.anim === 'intro' || el.dataset.anim === 'entrance' || el.dataset.anim === 'productAnim' || el.dataset.anim === 'heroMotion') replay();
+  }));
+  $$('[data-anim-speed]', body).forEach((btn) => (btn.onclick = () => {
+    a.speed = btn.dataset.animSpeed;
+    change({ rerender: true });
+    replay();
+  }));
+  $$('[data-anim-chk]', body).forEach((chk) => chk.addEventListener('change', () => {
+    a[chk.dataset.animChk] = chk.checked;
+    change();
+  }));
+  $('[data-replay-anim]', body).onclick = replay;
 }
