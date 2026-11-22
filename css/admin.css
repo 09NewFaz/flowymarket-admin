@@ -265,3 +265,39 @@ h1, h2, h3, h4 { margin: 0; }
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: #1d2433; color: #fff; padding: 11px 18px; border-radius: 10px; font-size: 14px; z-index: 200; box-shadow: var(--shadow); max-width: 90vw; }
 .toast.error { background: var(--danger); }
 .toast.ok { background: var(--ok); }
+
+/* ----- Editor avanzado estilo Marea Alcalina ----- */
+.blk-edit-head { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.blk-switch { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-weight: 600; font-size: 13.5px; }
+.blk-edit-body { display: grid; gap: 6px; }
+.ed-group { border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; margin-bottom: 10px; background: #fafbfc; }
+.ed-group > h5 { margin: 0 0 10px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.set-row.compact { padding: 8px 0; }
+.set-row.compact b { font-size: 13.5px; font-weight: 500; }
+.b-more-wrap { position: relative; }
+.b-menu { position: absolute; right: 0; top: 100%; margin-top: 4px; min-width: 145px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgba(16,24,40,.14); padding: 4px; z-index: 30; display: grid; gap: 2px; }
+.b-menu button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: var(--ink); }
+.b-menu button:hover { background: var(--bg); }
+.b-menu button.danger { color: var(--danger); }
+.fmt-bar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.fmt-bar button { width: 32px; height: 30px; border: 1px solid transparent; border-radius: 7px; background: none; display: inline-grid; place-items: center; font-size: 13.5px; color: var(--ink-2); }
+.fmt-bar button:hover { background: var(--bg); }
+.fmt-bar button.active { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-dark); }
+.fmt-sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+.fmt-sel { padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-size: 12.5px; }
+.list-item-ed { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin-bottom: 8px; }
+.item-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 6px; }
+.blk-foot { padding-top: 10px; border-top: 1px solid var(--line); margin-top: 6px; }
+
+/* Modal Agregar Bloque con búsqueda y categorías */
+.add-search { margin-bottom: 12px; }
+.add-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.add-cats button { border: 1px solid var(--line); background: #fff; color: var(--ink-2); padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 500; }
+.add-cats button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.add-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.add-card { display: flex; align-items: flex-start; gap: 11px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; text-align: left; transition: border-color .15s, background .15s; }
+.add-card:hover:not(:disabled) { border-color: var(--brand); background: var(--brand-soft); }
+.add-card:disabled { opacity: .45; cursor: not-allowed; }
+.add-card .add-ic { width: 34px; height: 34px; border-radius: 9px; background: var(--bg); display: grid; place-items: center; font-size: 18px; flex: none; }
+.add-card b { display: block; font-size: 13.5px; color: var(--ink); margin-bottom: 2px; }
+.add-card small { display: block; font-size: 12px; color: var(--ink-3); line-height: 1.35; }
