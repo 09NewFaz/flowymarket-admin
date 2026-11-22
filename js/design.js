@@ -366,6 +366,8 @@ function blockEditor(b) {
               <option value="grid" ${tpl === 'grid' ? 'selected' : ''}>Parrilla Moderna (Sin Espacios)</option>
               <option value="glass" ${tpl === 'glass' ? 'selected' : ''}>Glassmorfismo</option>
               <option value="classic" ${tpl === 'classic' ? 'selected' : ''}>Clásico</option>
+              <option value="boutique" ${tpl === 'boutique' ? 'selected' : ''}>Boutique (Tarjetas Grandes)</option>
+              <option value="compact" ${tpl === 'compact' ? 'selected' : ''}>Compacto (Lista Densa)</option>
             </select>
           </div>
         </div>
@@ -1002,6 +1004,15 @@ function renderGlobal() {
     <div class="ed-section"><h4>Esquinas</h4><p class="hint" style="margin:-4px 0 10px">Ajusta el redondeo de las esquinas.</p><div class="choice">
       ${[['square', 'Rectas'], ['semi', 'Semi redondeadas'], ['round', 'Redondeadas']].map(([v, l]) => `<button data-corners="${v}" class="${d.corners === v ? 'active' : ''}">${l}</button>`).join('')}
     </div></div>
+    <div class="ed-section"><h4>Estilo de botones</h4><div class="choice">
+      ${[['solid', 'Sólido'], ['gradient', 'Degradado'], ['glass', 'Vidrio / Hielo'], ['outline', 'Contorno'], ['glow', 'Neón']].map(([v, l]) => `<button data-btn-style="${v}" class="${(d.buttonStyle || 'solid') === v ? 'active' : ''}">${l}</button>`).join('')}
+    </div></div>
+    <div class="ed-section"><h4>Estilo de tarjetas</h4><div class="choice">
+      ${[['clean', 'Limpio'], ['elevated', 'Elevado'], ['glass', 'Vidrio'], ['bordered', 'Bordeado'], ['soft', 'Suave']].map(([v, l]) => `<button data-card-style="${v}" class="${(d.cardStyle || 'clean') === v ? 'active' : ''}">${l}</button>`).join('')}
+    </div></div>
+    <div class="ed-section"><h4>Ancho de la tienda</h4><div class="choice">
+      ${[['compact', 'Compacto'], ['standard', 'Estándar'], ['wide', 'Amplio'], ['full', 'Completo']].map(([v, l]) => `<button data-width="${v}" class="${(d.width || 'standard') === v ? 'active' : ''}">${l}</button>`).join('')}
+    </div></div>
     <div class="ed-section"><h4>Fondo</h4>
       <div class="choice" style="margin-bottom:12px">
         <button data-bg="color" class="${d.background.type !== 'image' && d.background.type !== 'video' ? 'active' : ''}">Color</button>
@@ -1042,6 +1053,9 @@ function renderGlobal() {
   $$('[data-hex]', body).forEach((inp) => inp.addEventListener('input', () => setColor(inp.dataset.hex, inp.value.trim())));
   $$('[data-font]', body).forEach((b) => (b.onclick = () => { d.font = b.dataset.font; change({ rerender: true }); }));
   $$('[data-corners]', body).forEach((b) => (b.onclick = () => { d.corners = b.dataset.corners; change({ rerender: true }); }));
+  $$('[data-btn-style]', body).forEach((b) => (b.onclick = () => { d.buttonStyle = b.dataset.btnStyle; change({ rerender: true }); }));
+  $$('[data-card-style]', body).forEach((b) => (b.onclick = () => { d.cardStyle = b.dataset.cardStyle; change({ rerender: true }); }));
+  $$('[data-width]', body).forEach((b) => (b.onclick = () => { d.width = b.dataset.width; change({ rerender: true }); }));
   $$('[data-bg]', body).forEach((b) => (b.onclick = () => { d.background.type = b.dataset.bg; change({ rerender: true }); }));
   $$('[data-bgtint]', body).forEach((b) => (b.onclick = () => { d.background.tint = b.dataset.bgtint; change({ rerender: true }); }));
   const ov = $('[data-bgov]', body);
