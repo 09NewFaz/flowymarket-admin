@@ -163,8 +163,8 @@ function editProduct(p) {
     <div class="field"><label for="ptitle">Nombre *</label><input id="ptitle" maxlength="200" value="${esc(d.title)}"></div>
     <div class="field"><label for="pdesc">Descripción</label><textarea id="pdesc" rows="3" maxlength="3000">${esc(d.description)}</textarea></div>
     <div class="row">
-      <div class="field"><label for="pprice">Precio *</label><input id="pprice" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(d.price)}"></div>
-      <div class="field"><label for="poffer">Precio de oferta</label><input id="poffer" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" value="${d.offer == null ? '' : esc(Number(d.offer))}"></div>
+      <div class="field"><label for="pprice">Precio (CLP) *</label><input id="pprice" type="number" min="0" step="1" inputmode="numeric" value="${esc(d.price)}"></div>
+      <div class="field"><label for="poffer">Precio de oferta (CLP)</label><input id="poffer" type="number" min="0" step="1" inputmode="numeric" placeholder="Opcional" value="${d.offer == null ? '' : esc(Math.round(Number(d.offer)))}"></div>
       <div class="field"><label for="pcat">Categoría</label><select id="pcat">
         <option value="">Sin categoría</option>
         ${S.cats.map((c) => `<option value="${esc(c.id)}" ${c.id === d.category_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
@@ -225,7 +225,7 @@ function editProduct(p) {
       </div>
       ${(g.items || []).map((it, ii) => `<div class="opt-item" data-ii="${ii}">
         <input class="input" data-it placeholder="Opción (ej: M)" maxlength="120" value="${esc(it.title || '')}">
-        <input class="input" data-ip type="number" min="0" step="0.01" placeholder="+ precio" value="${Number(it.price) > 0 ? esc(Number(it.price)) : ''}">
+        <input class="input" data-ip type="number" min="0" step="1" placeholder="+ precio" value="${Number(it.price) > 0 ? esc(Math.round(Number(it.price))) : ''}">
         <label class="chk"><input type="checkbox" data-iav ${it.available !== false ? 'checked' : ''}> Disponible</label>
         <button type="button" class="icon-btn" data-idel title="Quitar">×</button>
       </div>`).join('')}
