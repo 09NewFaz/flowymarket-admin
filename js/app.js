@@ -55,9 +55,20 @@ export async function saveConfig(patch) {
   updateBrand();
 }
 
+function setFavicon(url) {
+  if (!url) return;
+  document.querySelectorAll('link[rel*="icon"]').forEach((l) => l.remove());
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.href = url;
+  document.head.appendChild(link);
+}
+
 function updateBrand() {
   const warn = $('[data-wa-warn]');
   if (warn) warn.hidden = !!S.cfg.store.whatsapp;
+  const fav = safeUrl(S.cfg.store.favicon || S.cfg.store.logo);
+  if (fav) setFavicon(fav);
   const b = $('.brand');
   if (!b) return;
   const logo = safeUrl(S.cfg.store.logo);

@@ -133,7 +133,7 @@ async function publish() {
   const btn = $('[data-publish]');
   btn.disabled = true; btn.textContent = 'Publicando…';
   try {
-    const store = { ...S.cfg.store, name: draft.store.name, description: draft.store.description, logo: draft.store.logo };
+    const store = { ...S.cfg.store, name: draft.store.name, description: draft.store.description, logo: draft.store.logo, favicon: draft.store.favicon || '' };
     if (!store.name.trim()) throw new Error('La tienda necesita un nombre.');
     await saveConfig({ store, design: draft.design });
     dirty = false;
@@ -981,9 +981,9 @@ function renderGlobal() {
   const body = $('#ed-body');
   FONTS.forEach(loadFont);
   body.innerHTML = `
-    <div class="ed-section"><h4>Logo de la tienda</h4>
-      <p class="hint" style="margin:-4px 0 10px">Se muestra en la presentación, en la pantalla de bienvenida y como ícono de la pestaña.</p>
-      <div class="field">${imageField('globalLogo', draft.store.logo)}</div>
+    <div class="ed-section"><h4>Logo e ícono de la pestaña</h4>
+      <div class="field"><label>Logo de la tienda</label>${imageField('globalLogo', draft.store.logo)}<small>Aparece en la presentación y en la pantalla de bienvenida.</small></div>
+      <div class="field"><label>Ícono de la pestaña del navegador (Favicon)</label>${imageField('globalFavicon', draft.store.favicon || '')}<small>La imagen que aparece en la pestaña del navegador en lugar de la bolsa. Si lo dejas vacío, usa el logo.</small></div>
     </div>
     <div class="ed-section"><h4>Paletas de Colores</h4><div class="palettes">
       ${PALETTES.map((p) => `<button class="palette ${d.palette === p.id ? 'active' : ''}" data-pal="${p.id}">
@@ -1050,6 +1050,7 @@ function renderGlobal() {
   if (vid) vid.addEventListener('input', () => { d.background.video = vid.value.trim(); change(); });
   bindImageFields(body, 'design', (name, url) => {
     if (name === 'globalLogo') draft.store.logo = url;
+    else if (name === 'globalFavicon') draft.store.favicon = url;
     else d.background.image = url;
     change();
   });

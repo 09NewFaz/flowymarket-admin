@@ -23,6 +23,7 @@ export async function renderDetails(el) {
       <div class="field"><label for="sname">Nombre *</label><input id="sname" maxlength="80" value="${esc(s.name)}"></div>
       <div class="field"><label for="sdesc">Descripción</label><textarea id="sdesc" rows="4" maxlength="600">${esc(s.description)}</textarea><small>Aparece en la sección de presentación.</small></div>
       <div class="field"><label>Logo</label>${imageField('logo', s.logo)}</div>
+      <div class="field"><label>Ícono de la pestaña (Favicon)</label>${imageField('favicon', s.favicon || '')}<small>Imagen que aparece en la pestaña del navegador. Si queda vacío, usa el logo.</small></div>
     </div>
     <div class="card"><h2>Contacto y moneda</h2>
       <div class="row">
@@ -39,7 +40,7 @@ export async function renderDetails(el) {
     const whatsapp = $('#swa', el).value.replace(/\D/g, '');
     if (whatsapp && whatsapp.length < 8) return toast('El número de WhatsApp parece incompleto', 'error');
     doSave(e.target, { store: { ...S.cfg.store, name, description: $('#sdesc', el).value.trim(), whatsapp,
-      currency: $('#scur', el).value.trim() || '$', logo: $('[name=logo]', el).value } });
+      currency: $('#scur', el).value.trim() || '$', logo: $('[name=logo]', el).value, favicon: $('[name=favicon]', el).value } });
   };
 }
 
