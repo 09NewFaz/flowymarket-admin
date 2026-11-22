@@ -61,7 +61,7 @@ function updateBrand() {
   const b = $('.brand');
   if (!b) return;
   const logo = safeUrl(S.cfg.store.logo);
-  b.innerHTML = `<div class="logo">${logo ? `<img src="${esc(logo)}" alt="">` : '🛍️'}</div><span>${esc(S.cfg.store.name)}</span>`;
+  b.innerHTML = `<div class="logo">${logo ? `<img src="${esc(logo)}" alt="">` : I('<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>')}</div><span>${esc(S.cfg.store.name)}</span>`;
 }
 
 // ---------- Login ----------

@@ -1,7 +1,22 @@
 // Editor de diseño: bloques, estilos globales y vista previa en vivo (estilo Marea Alcalina).
-import { esc, PALETTES, FONTS, BLOCK_TYPES, BLOCK_CATEGORIES, createBlock, loadFont, uid } from './common.js';
+import { esc, PALETTES, FONTS, BLOCK_TYPES, BLOCK_CATEGORIES, BENTO_ICONS, createBlock, loadFont, uid } from './common.js';
 import { S, saveConfig } from './app.js';
 import { ICONS, $, $$, toast, modal, confirmDialog, imageField, bindImageFields } from './ui.js';
+
+const SVG = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ED_IC = {
+  cloud: SVG('<path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>'),
+  mobile: SVG('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>'),
+  desktop: SVG('<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'),
+  reload: SVG('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'),
+  more: SVG('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),
+  back: SVG('<path d="m15 18-6-6 6-6"/>'),
+  alignLeft: SVG('<path d="M21 6H3M15 12H3M17 18H3"/>'),
+  alignCenter: SVG('<path d="M21 6H3M17 12H7M19 18H5"/>'),
+  alignRight: SVG('<path d="M21 6H3M21 12H9M21 18H7"/>'),
+  alignJustify: SVG('<path d="M21 6H3M21 12H3M21 18H3"/>'),
+  box: SVG('<rect x="4" y="4" width="16" height="16" rx="2"/>'),
+};
 
 let draft = null;      // { store, design } en edición
 let dirty = false;
@@ -14,10 +29,10 @@ let device = 'mobile';
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const LEGACY_LABELS = {
-  whatsapp: { label: 'Botón de WhatsApp', icon: '💬' },
-  divider:  { label: 'Separador', icon: '➖' },
+  whatsapp: { label: 'Botón de WhatsApp', icon: BLOCK_TYPES.fab.icon },
+  divider:  { label: 'Separador', icon: BLOCK_TYPES.spacer.icon },
 };
-const blockMeta = (type) => BLOCK_TYPES[type] || LEGACY_LABELS[type] || { label: type, icon: '▫️' };
+const blockMeta = (type) => BLOCK_TYPES[type] || LEGACY_LABELS[type] || { label: type, icon: ED_IC.box };
 
 export function leaveDesign() {
   if (!dirty) return true;
@@ -36,7 +51,7 @@ export async function renderDesign(main) {
         <div class="ed-status">
           <span class="state"><i></i><span data-state>Publicado</span></span>
           <button class="btn ghost sm" data-discard hidden>Descartar</button>
-          <button class="btn sm" data-publish disabled>☁ Publicar</button>
+          <button class="btn sm" data-publish disabled>${ED_IC.cloud} Publicar</button>
         </div>
         <div class="ed-tabs" role="tablist">
           <button data-tab="blocks">Bloques</button>
@@ -48,9 +63,9 @@ export async function renderDesign(main) {
     </section>
     <section class="ed-preview">
       <div class="pv-bar">
-        <button data-device="mobile">📱 Móvil</button>
-        <button data-device="desktop">🖥️ Escritorio</button>
-        <button data-reload title="Recargar vista previa">⟳</button>
+        <button data-device="mobile">${ED_IC.mobile} Móvil</button>
+        <button data-device="desktop">${ED_IC.desktop} Escritorio</button>
+        <button data-reload title="Recargar vista previa">${ED_IC.reload}</button>
       </div>
       <div class="pv-frame ${device}"><iframe title="Vista previa de la tienda" src="preview/index.html?preview=1"></iframe></div>
     </section>
@@ -124,7 +139,7 @@ async function publish() {
     toast(err.message || 'No se pudo publicar', 'error');
     btn.disabled = false;
   }
-  btn.textContent = '☁ Publicar';
+  btn.innerHTML = `${ED_IC.cloud} Publicar`;
 }
 
 // ================= Bloques =================
@@ -146,11 +161,11 @@ function renderBlocks() {
       const b = blocks[idx];
       body.innerHTML = `
         <div class="blk-edit-head">
-          <button class="icon-btn" data-back title="Volver a Bloques">←</button>
+          <button class="icon-btn" data-back title="Volver a Bloques">${ED_IC.back}</button>
           <select class="blk-switch" data-switch aria-label="Cambiar de bloque">
-            ${blocks.map((x) => `<option value="${esc(x.id)}" ${x.id === b.id ? 'selected' : ''}>${blockMeta(x.type).icon} ${esc(blockName(x))}</option>`).join('')}
+            ${blocks.map((x) => `<option value="${esc(x.id)}" ${x.id === b.id ? 'selected' : ''}>${esc(blockName(x))}</option>`).join('')}
           </select>
-          <button class="icon-btn" data-back title="Cerrar">×</button>
+          <button class="icon-btn" data-back title="Cerrar">${ICONS.x}</button>
         </div>
         <div class="blk-edit-body">${blockEditor(b)}</div>`;
       $$('[data-back]', body).forEach((btn) => (btn.onclick = () => { openBlock = null; renderBlocks(); }));
@@ -172,11 +187,11 @@ function renderBlocks() {
           <button class="icon-btn" data-up title="Subir" ${i === 0 ? 'disabled' : ''}>${ICONS.up}</button>
           <button class="icon-btn" data-down title="Bajar" ${i === blocks.length - 1 ? 'disabled' : ''}>${ICONS.down}</button>
           <div class="b-more-wrap">
-            <button class="icon-btn" data-more="${esc(b.id)}" title="Opciones del bloque">⋯</button>
+            <button class="icon-btn" data-more="${esc(b.id)}" title="Opciones del bloque">${ED_IC.more}</button>
             ${openMenuId === b.id ? `<div class="b-menu">
-              ${!unique ? `<button data-dup>⧉ Duplicar</button>` : ''}
-              <button data-eye>${b.visible === false ? '👁️ Mostrar' : '🙈 Ocultar'}</button>
-              ${b.type !== 'catalog' ? `<button class="danger" data-del>🗑️ Eliminar</button>` : ''}
+              ${!unique ? `<button data-dup>${ICONS.copy} Duplicar</button>` : ''}
+              <button data-eye>${b.visible === false ? ICONS.eye : ICONS.eyeOff} ${b.visible === false ? 'Mostrar' : 'Ocultar'}</button>
+              ${b.type !== 'catalog' ? `<button class="danger" data-del>${ICONS.trash} Eliminar</button>` : ''}
             </div>` : ''}
           </div>
         </div>
@@ -409,7 +424,7 @@ function blockEditor(b) {
     case 'text': return `
       <div class="field"><label>Formato</label>
         <div class="fmt-bar">
-          ${[['left', '⫷'], ['center', '≡'], ['right', '⫸'], ['justify', '☰']].map(([v, ic]) =>
+          ${[['left', ED_IC.alignLeft], ['center', ED_IC.alignCenter], ['right', ED_IC.alignRight], ['justify', ED_IC.alignJustify]].map(([v, ic]) =>
             `<button type="button" data-bset="align" data-v="${v}" class="${(b.align || 'center') === v ? 'active' : ''}" title="${v}">${ic}</button>`).join('')}
           <span class="fmt-sep"></span>
           <button type="button" data-btog="bold" class="${b.bold ? 'active' : ''}" title="Negrita"><b>B</b></button>
@@ -688,12 +703,15 @@ function blockEditor(b) {
 
     case 'bento': {
       const items = Array.isArray(b.items) ? b.items : [];
+      const icKeys = Object.entries(BENTO_ICONS);
       return `
         <div class="field"><label>Título</label><input data-b="title" maxlength="80" value="${esc(b.title || '')}"></div>
         <div class="ed-group"><h5>Tarjetas</h5>
           ${items.map((it, ii) => `<div class="list-item-ed">
             <div class="row" style="margin-bottom:6px">
-              <input class="input" data-arr="items.${ii}.icon" placeholder="Emoji o ícono" value="${esc(it.icon || '')}">
+              <select class="input" data-arrs="items.${ii}.icon">
+                ${icKeys.map(([k, v]) => `<option value="${k}" ${(it.icon || 'sparkles') === k ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}
+              </select>
               <input class="input" data-arr="items.${ii}.title" placeholder="Título" value="${esc(it.title || '')}">
             </div>
             <textarea class="input" rows="2" data-arr="items.${ii}.desc" placeholder="Descripción">${esc(it.desc || '')}</textarea>
@@ -792,7 +810,7 @@ const NEW_ITEMS = {
   faq: () => ({ q: '¿Nueva pregunta?', a: 'Respuesta aquí.' }),
   gallery: () => ({ url: '', caption: '' }),
   footerLinks: () => ({ label: 'Enlace', url: '#top' }),
-  bento: () => ({ icon: '✨', title: 'Característica', desc: 'Descripción breve.' }),
+  bento: () => ({ icon: 'sparkles', title: 'Característica', desc: 'Descripción breve.' }),
   stats: () => ({ value: '100%', label: 'Métrica' }),
   pricing: () => ({ name: 'Nuevo Plan', monthly: '$19', yearly: '$190', desc: '', features: 'Beneficio 1', ctaText: 'Elegir', ctaUrl: '', featured: false }),
 };
