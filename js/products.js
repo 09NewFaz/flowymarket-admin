@@ -179,7 +179,11 @@ function editProduct(p) {
       <div class="set-row" id="stock-row" ${d.stock >= UNLIMITED ? 'hidden' : ''}><div><b>Unidades disponibles</b></div><input class="input" id="pstock" type="number" min="0" max="99998" style="width:110px" value="${d.stock >= UNLIMITED ? 10 : d.stock}"></div>
     </div>
     <div class="field" style="margin-top:16px"><label>Opciones <small>(talle, color, tamaño, extras…)</small></label><div id="opts"></div>
-      <button type="button" class="btn ghost sm" data-add-group>＋ Grupo de opciones</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn ghost sm" data-add-group>＋ Grupo de opciones</button>
+        <button type="button" class="btn ghost sm" data-preset-decant>＋ Plantilla Decants (3ml / 5ml / 10ml)</button>
+        <button type="button" class="btn ghost sm" data-preset-combo>＋ Plantilla Promo Combo 2x</button>
+      </div></div>
     <div class="error-box" hidden></div>
   </form>`, {
     wide: true,
@@ -245,6 +249,32 @@ function editProduct(p) {
   };
   drawOpts();
   $('[data-add-group]', m).onclick = () => { d.options.push({ title: '', required: false, multi: false, items: [{ title: '', price: 0, available: true }] }); drawOpts(); };
+  $('[data-preset-decant]', m).onclick = () => {
+    d.options.push({
+      title: 'Tamaño', required: true, multi: false,
+      items: [
+        { title: '3ml', price: 0, available: true },
+        { title: '5ml', price: 0, available: true },
+        { title: '10ml', price: 0, available: true },
+      ],
+    });
+    drawOpts();
+    toast('Agregado grupo Tamaño (ajusta los "+ precio" si corresponde)');
+  };
+  $('[data-preset-combo]', m).onclick = () => {
+    const names = S.prods
+      .filter((x) => x.id !== d.id && !/promo|combo|pack/i.test(x.title))
+      .map((x) => x.title.replace(/^decant\s+/i, '').replace(/\s+\d+\s*ml$/i, '').trim())
+      .filter((v, idx, arr) => v && arr.indexOf(v) === idx)
+      .slice(0, 12);
+    const items = (names.length ? names : ['Aroma 1', 'Aroma 2']).map((title) => ({ title, price: 0, available: true }));
+    d.options.push(
+      { title: '1er Perfume', required: true, multi: false, items: items.map((x) => ({ ...x })) },
+      { title: '2do Perfume', required: true, multi: false, items: items.map((x) => ({ ...x })) },
+    );
+    drawOpts();
+    toast('Agregados 2 selectores de perfume para tu promo combo');
+  };
 
   const delBtn = $('[data-delp]', m);
   if (delBtn) delBtn.onclick = async () => {
