@@ -57,7 +57,7 @@ export async function renderCheckout(el) {
     <div class="card"><h2>Formas de entrega</h2>
       <div class="set-row"><div><b>${ORDER_TYPES[0].label}</b></div>${switchHtml('pickup', ck.pickup)}</div>
       <div class="set-row"><div><b>${ORDER_TYPES[1].label}</b><small>Costo de envío fijo (0 = gratis)</small></div>
-        <div style="display:flex;gap:12px;align-items:center"><input class="input" id="dprice" type="number" min="0" step="0.01" style="width:110px" value="${Number(ck.deliveryPrice) || 0}">${switchHtml('delivery', ck.delivery)}</div></div>
+        <div style="display:flex;gap:12px;align-items:center"><input class="input" id="dprice" type="number" min="0" step="1" style="width:110px" value="${Math.round(Number(ck.deliveryPrice) || 0)}">${switchHtml('delivery', ck.delivery)}</div></div>
       <div class="set-row"><div><b>${ORDER_TYPES[2].label}</b><small>Para restaurantes o locales.</small></div>${switchHtml('table', ck.table)}</div>
     </div>
     <div class="card"><h2>Datos del cliente</h2>
@@ -78,6 +78,26 @@ export async function renderCheckout(el) {
     </div>
     <div class="card"><div class="card-head"><h2>Preguntas adicionales</h2>${switchHtml('questionsOn', ck.questionsOn, 'Activar')}</div>
       <div id="qs"></div><button class="btn ghost sm" data-addq>＋ Pregunta</button></div>
+    <div class="card"><div class="card-head"><h2>Aftersell / Post-venta</h2>${switchHtml('afOn', ck.aftersell?.enabled !== false, 'Activar')}</div>
+      <p class="hint" style="margin:-6px 0 14px">Lo que ve el cliente justo después de confirmar su pedido (oferta extra, cupón de recompra, pasos y redes).</p>
+      <div class="field"><label for="aftitle">Título de agradecimiento</label><input id="aftitle" maxlength="80" placeholder="¡Gracias por tu pedido!" value="${esc(ck.aftersell?.title || '')}"></div>
+      <div class="set-row"><div><b>Mostrar pasos siguientes</b><small>1. Envía por WhatsApp · 2. Confirmamos pago · 3. Despacho.</small></div>${switchHtml('afSteps', ck.aftersell?.steps !== false)}</div>
+      <div class="set-row"><div><b>Oferta post-compra (Upsell)</b><small>Muestra una oferta especial para sumar al mismo pedido por WhatsApp.</small></div>${switchHtml('afUpsellOn', !!ck.aftersell?.upsellOn)}</div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label for="afutitle">Título de la oferta</label><input id="afutitle" maxlength="90" placeholder="¡Aprovecha antes del despacho!" value="${esc(ck.aftersell?.upsellTitle || '')}"></div>
+        <div class="field"><label for="afuprice">Precio oferta (CLP, opcional)</label><input id="afuprice" type="number" min="0" step="1" placeholder="Ej: 2500" value="${ck.aftersell?.upsellPrice ? esc(Math.round(Number(ck.aftersell.upsellPrice))) : ''}"></div>
+      </div>
+      <div class="field"><label for="afutext">Descripción de la oferta</label><textarea id="afutext" rows="2" maxlength="260" placeholder="Ej: Suma un decant extra de 3ml por solo $2.500">${esc(ck.aftersell?.upsellText || '')}</textarea></div>
+      <div class="field"><label for="afucta">Texto del botón de la oferta</label><input id="afucta" maxlength="60" placeholder="Sumar oferta a mi pedido" value="${esc(ck.aftersell?.upsellCta || '')}"></div>
+      <div class="row">
+        <div class="field"><label for="afcode">Cupón para próxima compra</label><input id="afcode" maxlength="30" placeholder="Ej: VOLVER10" value="${esc(ck.aftersell?.couponCode || '')}"></div>
+        <div class="field"><label for="afctext">Texto del cupón</label><input id="afctext" maxlength="80" placeholder="10% OFF en tu próximo pedido" value="${esc(ck.aftersell?.couponText || '')}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="afslbl">Botón de red social (opcional)</label><input id="afslbl" maxlength="50" placeholder="Síguenos en Instagram" value="${esc(ck.aftersell?.socialLabel || '')}"></div>
+        <div class="field"><label for="afsurl">Enlace de red social</label><input id="afsurl" placeholder="https://instagram.com/tu_tienda" value="${esc(ck.aftersell?.socialUrl || '')}"></div>
+      </div>
+    </div>
     ${saveBar}</div>`;
 
   const drawQs = () => {
@@ -112,6 +132,20 @@ export async function renderCheckout(el) {
       taxOn: checked(el, 'taxOn'), taxPct: Math.min(Math.max(Number($('#taxpct', el).value) || 0, 0), 100),
       questionsOn: checked(el, 'questionsOn'),
       questions: questions.map((q) => ({ text: (q.text || '').trim(), required: !!q.required })).filter((q) => q.text),
+      aftersell: {
+        enabled: checked(el, 'afOn'),
+        title: $('#aftitle', el).value.trim(),
+        steps: checked(el, 'afSteps'),
+        upsellOn: checked(el, 'afUpsellOn'),
+        upsellTitle: $('#afutitle', el).value.trim(),
+        upsellText: $('#afutext', el).value.trim(),
+        upsellPrice: Math.max(Number($('#afuprice', el).value) || 0, 0) || null,
+        upsellCta: $('#afucta', el).value.trim(),
+        couponCode: $('#afcode', el).value.trim().toUpperCase(),
+        couponText: $('#afctext', el).value.trim(),
+        socialLabel: $('#afslbl', el).value.trim(),
+        socialUrl: $('#afsurl', el).value.trim(),
+      },
     } });
   };
 }

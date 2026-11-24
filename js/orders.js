@@ -1,7 +1,7 @@
 // Pedidos, clientes y estadísticas.
-import { sb, esc, money, ORDER_STATUSES, ADDRESS_FIELDS, waLink } from './common.js';
+import { sb, esc, money, moneyText, ORDER_STATUSES, ADDRESS_FIELDS, waLink } from './common.js';
 import { S, setOrderBadge } from './app.js';
-import { $, $$, toast, modal, confirmDialog, fmtDate } from './ui.js';
+import { ICONS, $, $$, toast, modal, confirmDialog, fmtDate } from './ui.js';
 
 const STATUS_TAG = { Recibido: 'brand', 'En Preparación': 'warn', Listo: 'ok', Entregado: '', Cancelado: 'danger' };
 let filter = 'Todos';
@@ -89,11 +89,38 @@ function openOrder(o) {
       ${addrText(o) ? `<dt>Dirección</dt><dd>${esc(addrText(o))}</dd>` : ''}
       <dt>Método de pago</dt><dd>${esc(o.pay || '—')}</dd>
       ${(o.answers || []).map((a) => `<dt>${esc(a.q)}</dt><dd>${esc(a.a || '—')}</dd>`).join('')}
-    </dl>`, {
+    </dl>
+    ${phone ? `<div class="post-box">
+      <h4>Seguimiento post-venta (WhatsApp)</h4>
+      <div class="field" style="margin-bottom:8px"><input class="input" id="otrack" placeholder="Código de seguimiento / nota de despacho (opcional)"></div>
+      <div class="post-actions">
+        <button type="button" class="btn ghost sm" data-wa-tpl="confirm">Confirmar pedido</button>
+        <button type="button" class="btn ghost sm" data-wa-tpl="shipped">Listo / Despachado</button>
+        <button type="button" class="btn ghost sm" data-wa-tpl="review">Pedir reseña + cupón</button>
+      </div>
+    </div>` : ''}`, {
     footer: `<button class="btn ghost" data-delo style="margin-right:auto;color:var(--danger)">Eliminar</button>
-      ${phone ? `<a class="btn ghost" target="_blank" rel="noopener" href="${esc(waLink(phone, `Hola ${o.customer?.name || ''}! Te escribimos de ${S.cfg.store.name} por tu pedido #${o.num}.`))}">💬 WhatsApp</a>` : ''}
+      ${phone ? `<a class="btn ghost" target="_blank" rel="noopener" href="${esc(waLink(phone, `Hola ${o.customer?.name || ''}! Te escribimos de ${S.cfg.store.name} por tu pedido #${o.num}.`))}">${ICONS.wa} WhatsApp</a>` : ''}
       <button class="btn" data-dismiss>Cerrar</button>`,
   });
+  if (phone) {
+    const storeName = S.cfg.store.name || 'la tienda';
+    const customerName = o.customer?.name ? ` ${o.customer.name}` : '';
+    const transfer = S.cfg.payments?.transferInfo ? `\n\nDatos para transferir:\n${S.cfg.payments.transferInfo}` : '';
+    const coupon = S.cfg.checkout?.aftersell?.couponCode;
+    $$('[data-wa-tpl]', m).forEach((btn) => (btn.onclick = () => {
+      const track = ($('#otrack', m)?.value || '').trim();
+      let text = '';
+      if (btn.dataset.waTpl === 'confirm') {
+        text = `Hola${customerName}! Confirmamos tu pedido #${o.num} en ${storeName} por ${moneyText(o.total, c)}.${o.pay === 'Transferencia' ? transfer : ''}\nCualquier duda nos escribes por aquí.`;
+      } else if (btn.dataset.waTpl === 'shipped') {
+        text = `Hola${customerName}! Tu pedido #${o.num} de ${storeName} ya está listo${track ? `.\nSeguimiento / detalle: ${track}` : ' para entrega/despacho.'} ¡Gracias por elegirnos!`;
+      } else if (btn.dataset.waTpl === 'review') {
+        text = `Hola${customerName}! ¿Cómo estuvo tu pedido #${o.num} de ${storeName}? Nos encantaría saber qué te pareció.${coupon ? `\n\nComo agradecimiento, usa el código *${coupon}* en tu próxima compra.` : ''}`;
+      }
+      window.open(waLink(phone, text), '_blank', 'noopener');
+    }));
+  }
   const upd = async (patch) => {
     const { data, error } = await sb.from('orders').update(patch).eq('id', o.id).select().single();
     if (error) {
