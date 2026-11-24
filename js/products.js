@@ -167,7 +167,7 @@ function editProduct(p) {
     <div class="field"><label for="ptitle">Nombre *</label><input id="ptitle" maxlength="200" value="${esc(d.title)}"></div>
     <div class="field"><label for="pdesc">Descripción</label><textarea id="pdesc" rows="3" maxlength="3000">${esc(d.description)}</textarea></div>
     <div class="row">
-      <div class="field"><label for="pprice">Precio (CLP) *</label><input id="pprice" type="number" min="0" step="1" inputmode="numeric" value="${esc(d.price)}"></div>
+      <div class="field"><label for="pprice">Precio (CLP) *</label><input id="pprice" type="number" min="0" step="1" inputmode="numeric" value="${esc(d.price)}"><small>Pon 0 si cada opción tiene su propio precio final (no se sumará).</small></div>
       <div class="field"><label for="poffer">Precio de oferta (CLP)</label><input id="poffer" type="number" min="0" step="1" inputmode="numeric" placeholder="Opcional" value="${d.offer == null ? '' : esc(Math.round(Number(d.offer)))}"></div>
       <div class="field"><label for="pcat">Categoría</label><select id="pcat">
         <option value="">Sin categoría</option>
