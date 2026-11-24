@@ -432,25 +432,42 @@ function openImportCsv() {
       const cCart = idx(['pedible', 'carrito', 'cart']);
       const cImg = idx(['imagen', 'img']);
       const cImgs = idx(['imagenes', 'imgs', 'galeria']);
-      const hasOnlyIdAndImgs = cId >= 0 && (cImg >= 0 || cImgs >= 0) && (cTitle < 0 || cPrice < 0);
+      const cOpts = idx(['opciones', 'options']);
+      const cDel = idx(['eliminar', 'delete']);
+      const hasOnlyIdAndImgs = cId >= 0 && (cImg >= 0 || cImgs >= 0 || cDel >= 0) && (cTitle < 0 || cPrice < 0);
       if (!hasOnlyIdAndImgs && (cTitle < 0 || cPrice < 0)) throw new Error('Faltan las columnas obligatorias "titulo" y "precio".');
 
       const catByName = new Map(S.cats.map((c) => [c.name.trim().toLowerCase(), c.id]));
       const prodById = new Map(S.prods.map((p) => [p.id, p]));
-      let created = 0; let updated = 0;
+      let created = 0; let updated = 0; let deleted = 0;
 
       for (const r of rows.slice(1)) {
         const existingId = cId >= 0 ? (r[cId] || '').trim() : '';
+        if (cDel >= 0 && /^(si|sí|true|1|yes)$/i.test(String(r[cDel] || '').trim())) {
+          if (existingId && prodById.has(existingId)) {
+            const { error } = await sb.from('products').delete().eq('id', existingId);
+            if (!error) { prodById.delete(existingId); deleted++; }
+          }
+          continue;
+        }
         const imgUrl = cImg >= 0 ? safeUrl((r[cImg] || '').trim()) : '';
         const extraImgs = cImgs >= 0
           ? String(r[cImgs] || '').split('|').map((u) => safeUrl(u.trim())).filter(Boolean).slice(0, 10)
           : null;
+        let parsedOpts = null;
+        if (cOpts >= 0 && (r[cOpts] || '').trim()) {
+          try {
+            const j = JSON.parse(r[cOpts]);
+            if (Array.isArray(j)) parsedOpts = j;
+          } catch { /* ignore invalid json */ }
+        }
 
         if (hasOnlyIdAndImgs) {
           if (!existingId || !prodById.has(existingId)) continue;
           const imgPatch = { updated_at: new Date().toISOString() };
           if (cImg >= 0 && imgUrl) imgPatch.img = imgUrl;
           if (extraImgs && extraImgs.length) imgPatch.imgs = extraImgs;
+          if (parsedOpts) imgPatch.options = parsedOpts;
           const { error } = await sb.from('products').update(imgPatch).eq('id', existingId);
           if (!error) updated++;
           continue;
@@ -486,18 +503,19 @@ function openImportCsv() {
         };
         if (cImg >= 0 && imgUrl) patch.img = imgUrl;
         if (extraImgs && extraImgs.length) patch.imgs = extraImgs;
+        if (parsedOpts) patch.options = parsedOpts;
         if (existingId && prodById.has(existingId)) {
           const { error } = await sb.from('products').update(patch).eq('id', existingId);
           if (!error) updated++;
         } else {
           const { error } = await sb.from('products').insert({
-            ...patch, id: slugId(title), img: imgUrl || '', imgs: extraImgs || [], options: [], position: S.prods.length + created,
+            ...patch, id: slugId(title), img: imgUrl || '', imgs: extraImgs || [], options: parsedOpts || [], position: S.prods.length + created,
           });
           if (!error) created++;
         }
       }
       m.close();
-      toast(`CSV importado: ${created} nuevos, ${updated} actualizados`, 'ok');
+      toast(`CSV importado: ${created} nuevos, ${updated} actualizados${deleted ? `, ${deleted} eliminados` : ''}`, 'ok');
       await refresh();
     } catch (e) {
       err.textContent = e.message || 'No se pudo importar el CSV.';
