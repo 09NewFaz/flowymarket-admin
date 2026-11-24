@@ -25,6 +25,8 @@ function draw() {
 
   main.innerHTML = `<div class="view">
     <div class="view-head"><h1>Productos</h1>
+      <button class="btn ghost" data-export-csv>Exportar CSV</button>
+      <button class="btn ghost" data-import-csv>Importar CSV</button>
       <button class="btn ghost" data-new-cat>＋ Categoría</button>
       <button class="btn" data-new-prod>＋ Producto</button>
       <p>${S.prods.length} productos en ${S.cats.length} categorías.</p>
@@ -68,6 +70,8 @@ function draw() {
     </div>
   </div>`;
 
+  $('[data-export-csv]', main).onclick = exportCsv;
+  $('[data-import-csv]', main).onclick = openImportCsv;
   $('[data-new-cat]', main).onclick = () => editCategory();
   $('[data-new-prod]', main).onclick = () => editProduct();
   const pq = $('#pq', main);
@@ -329,5 +333,154 @@ function editProduct(p) {
     m.close();
     toast(isNew ? 'Producto creado' : 'Cambios guardados', 'ok');
     await refresh();
+  };
+}
+
+// ---------- Exportar / Importar CSV (compatible con Excel) ----------
+const csvCell = (v) => {
+  const s = String(v ?? '');
+  return /[",;\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+function exportCsv() {
+  const catName = (id) => S.cats.find((c) => c.id === id)?.name || '';
+  const headers = ['id', 'categoria', 'titulo', 'descripcion', 'precio', 'oferta', 'stock', 'oculto', 'pedible'];
+  const rows = S.prods.map((p) => [
+    p.id,
+    catName(p.category_id),
+    p.title,
+    p.description || '',
+    Math.round(Number(p.price) || 0),
+    p.offer == null ? '' : Math.round(Number(p.offer)),
+    p.stock >= UNLIMITED ? 'ilimitado' : p.stock,
+    p.hidden ? 'si' : 'no',
+    p.cart === false ? 'no' : 'si',
+  ]);
+  const csv = '\uFEFF' + [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `productos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast(`Exportados ${S.prods.length} productos a CSV`, 'ok');
+}
+
+function parseCsv(text) {
+  const clean = text.replace(/^\uFEFF/, '');
+  const firstLine = clean.split(/\r?\n/)[0] || '';
+  const sep = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQ = false;
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (inQ) {
+      if (ch === '"' && clean[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') inQ = false;
+      else cell += ch;
+    } else if (ch === '"') {
+      inQ = true;
+    } else if (ch === sep) {
+      row.push(cell); cell = '';
+    } else if (ch === '\r' || ch === '\n') {
+      if (ch === '\r' && clean[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some((x) => x.trim() !== '')) rows.push(row);
+      row = [];
+    } else {
+      cell += ch;
+    }
+  }
+  row.push(cell);
+  if (row.some((x) => x.trim() !== '')) rows.push(row);
+  return rows;
+}
+
+function openImportCsv() {
+  const m = modal('Importar productos desde CSV / Excel', `
+    <p class="hint" style="margin:0 0 12px">Sube un archivo <b>.csv</b> (puedes exportar el actual, editarlo en Excel y volver a subirlo). Si una fila tiene un <b>id</b> existente, actualiza el producto; si no, crea uno nuevo.</p>
+    <div class="field"><label for="csvfile">Archivo CSV</label><input id="csvfile" type="file" accept=".csv,text/csv"></div>
+    <p class="hint">Columnas soportadas: <code>id, categoria, titulo, descripcion, precio, oferta, stock, oculto, pedible</code></p>
+    <div class="error-box" hidden></div>`, {
+    footer: '<button class="btn ghost" data-dismiss>Cancelar</button><button class="btn" data-run>Importar</button>',
+  });
+
+  $('[data-run]', m).onclick = async () => {
+    const err = $('.error-box', m);
+    err.hidden = true;
+    const file = $('#csvfile', m).files[0];
+    if (!file) { err.textContent = 'Selecciona un archivo .csv primero.'; err.hidden = false; return; }
+    const btn = $('[data-run]', m);
+    btn.disabled = true; btn.textContent = 'Importando…';
+    try {
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) throw new Error('El archivo no tiene filas de productos.');
+      const head = rows[0].map((h) => h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
+      const idx = (names) => names.map((n) => head.indexOf(n)).find((i) => i >= 0) ?? -1;
+      const cId = idx(['id']);
+      const cCat = idx(['categoria', 'category']);
+      const cTitle = idx(['titulo', 'nombre', 'title', 'producto']);
+      const cDesc = idx(['descripcion', 'description']);
+      const cPrice = idx(['precio', 'price']);
+      const cOffer = idx(['oferta', 'precio_oferta', 'offer']);
+      const cStock = idx(['stock']);
+      const cHidden = idx(['oculto', 'hidden']);
+      const cCart = idx(['pedible', 'carrito', 'cart']);
+      if (cTitle < 0 || cPrice < 0) throw new Error('Faltan las columnas obligatorias "titulo" y "precio".');
+
+      const catByName = new Map(S.cats.map((c) => [c.name.trim().toLowerCase(), c.id]));
+      const prodById = new Map(S.prods.map((p) => [p.id, p]));
+      let created = 0; let updated = 0;
+
+      for (const r of rows.slice(1)) {
+        const title = (r[cTitle] || '').trim().slice(0, 200);
+        const price = Number(String(r[cPrice] || '').replace(/[^\d.-]/g, ''));
+        if (!title || Number.isNaN(price) || price < 0) continue;
+
+        let catId = null;
+        if (cCat >= 0 && (r[cCat] || '').trim()) {
+          const cn = r[cCat].trim();
+          const key = cn.toLowerCase();
+          if (catByName.has(key)) catId = catByName.get(key);
+          else {
+            const newId = slugId(cn);
+            const { error: ce } = await sb.from('categories').insert({ id: newId, name: cn.slice(0, 80), position: catByName.size });
+            if (!ce) { catByName.set(key, newId); catId = newId; }
+          }
+        }
+
+        const rawOffer = cOffer >= 0 ? String(r[cOffer] || '').replace(/[^\d.-]/g, '') : '';
+        const offer = rawOffer !== '' && Number(rawOffer) >= 0 && Number(rawOffer) < price ? Number(rawOffer) : null;
+        const rawStock = cStock >= 0 ? String(r[cStock] || '').trim().toLowerCase() : '';
+        const stock = !rawStock || rawStock === 'ilimitado' ? UNLIMITED : Math.max(0, Math.min(99998, parseInt(rawStock, 10) || 0));
+        const hidden = cHidden >= 0 ? /^(si|sí|true|1|yes)$/i.test(String(r[cHidden] || '').trim()) : false;
+        const cart = cCart >= 0 ? !/^(no|false|0)$/i.test(String(r[cCart] || '').trim()) : true;
+        const description = cDesc >= 0 ? (r[cDesc] || '').trim().slice(0, 3000) : '';
+
+        const existingId = cId >= 0 ? (r[cId] || '').trim() : '';
+        const patch = {
+          title, description, price, offer, category_id: catId, stock, hidden, cart,
+          updated_at: new Date().toISOString(),
+        };
+        if (existingId && prodById.has(existingId)) {
+          const { error } = await sb.from('products').update(patch).eq('id', existingId);
+          if (!error) updated++;
+        } else {
+          const { error } = await sb.from('products').insert({
+            ...patch, id: slugId(title), img: '', imgs: [], options: [], position: S.prods.length + created,
+          });
+          if (!error) created++;
+        }
+      }
+      m.close();
+      toast(`CSV importado: ${created} nuevos, ${updated} actualizados`, 'ok');
+      await refresh();
+    } catch (e) {
+      err.textContent = e.message || 'No se pudo importar el CSV.';
+      err.hidden = false;
+      btn.disabled = false; btn.textContent = 'Importar';
+    }
   };
 }

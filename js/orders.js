@@ -100,9 +100,11 @@ function openOrder(o) {
       </div>
     </div>` : ''}`, {
     footer: `<button class="btn ghost" data-delo style="margin-right:auto;color:var(--danger)">Eliminar</button>
+      <button class="btn ghost" data-print>Imprimir comprobante</button>
       ${phone ? `<a class="btn ghost" target="_blank" rel="noopener" href="${esc(waLink(phone, `Hola ${o.customer?.name || ''}! Te escribimos de ${S.cfg.store.name} por tu pedido #${o.num}.`))}">${ICONS.wa} WhatsApp</a>` : ''}
       <button class="btn" data-dismiss>Cerrar</button>`,
   });
+  $('[data-print]', m).onclick = () => printOrder(o);
   if (phone) {
     const storeName = S.cfg.store.name || 'la tienda';
     const customerName = o.customer?.name ? ` ${o.customer.name}` : '';
@@ -223,4 +225,36 @@ export async function renderStats(el) {
         ${topList.map(([t, v]) => `<tr><td>${esc(t)}</td><td>${v.q}</td><td>${money(v.total, c)}</td></tr>`).join('')}</tbody></table>`
         : '<p class="empty">Aún no hay ventas.</p>'}
     </div></div>`;
+}
+
+function printOrder(o) {
+  const c = cur();
+  let el = $('#print-receipt');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'print-receipt';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <h2>${esc(S.cfg.store.name || 'Tienda')}</h2>
+    <div class="pr-meta">
+      <div><b>Comprobante de Pedido #${esc(o.num)}</b></div>
+      <div>Fecha: ${esc(new Date(o.created_at).toLocaleString('es'))}</div>
+      <div>Estado: ${esc(o.status)} · ${o.paid ? 'Pagado' : esc(o.pay || 'Pendiente')}</div>
+      ${o.customer?.name ? `<div>Cliente: ${esc(o.customer.name)}${o.customer?.phone ? ` (${esc(o.customer.phone)})` : ''}</div>` : ''}
+      <div>Entrega: ${esc(o.type || '—')}${addrText(o) ? ` — ${esc(addrText(o))}` : ''}</div>
+    </div>
+    <table>${(o.items || []).map((i) => `<tr>
+      <td><b>${esc(i.q)} × ${esc(i.title)}</b>${i.opts?.length ? `<br><small>${esc(i.opts.join(', '))}</small>` : ''}${i.note ? `<br><small>Nota: ${esc(i.note)}</small>` : ''}</td>
+      <td>${money(i.price * i.q, c)}</td>
+    </tr>`).join('')}</table>
+    <div class="pr-tot">
+      <div><span>Subtotal</span><span>${money(o.subtotal, c)}</span></div>
+      ${Number(o.discount) > 0 ? `<div><span>Descuento${o.promo ? ` (${esc(o.promo)})` : ''}</span><span>−${money(o.discount, c)}</span></div>` : ''}
+      ${Number(o.tax) > 0 ? `<div><span>Impuestos</span><span>${money(o.tax, c)}</span></div>` : ''}
+      ${Number(o.shipping) > 0 ? `<div><span>Envío</span><span>${money(o.shipping, c)}</span></div>` : ''}
+      <div class="grand"><span>Total</span><span>${money(o.total, c)}</span></div>
+    </div>
+    <div class="pr-foot">Gracias por tu compra · ${esc(S.cfg.store.name || '')}</div>`;
+  window.print();
 }
