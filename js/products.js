@@ -344,7 +344,7 @@ const csvCell = (v) => {
 
 function exportCsv() {
   const catName = (id) => S.cats.find((c) => c.id === id)?.name || '';
-  const headers = ['id', 'categoria', 'titulo', 'descripcion', 'precio', 'oferta', 'stock', 'oculto', 'pedible'];
+  const headers = ['id', 'categoria', 'titulo', 'descripcion', 'precio', 'oferta', 'stock', 'oculto', 'pedible', 'imagen', 'imagenes'];
   const rows = S.prods.map((p) => [
     p.id,
     catName(p.category_id),
@@ -355,6 +355,8 @@ function exportCsv() {
     p.stock >= UNLIMITED ? 'ilimitado' : p.stock,
     p.hidden ? 'si' : 'no',
     p.cart === false ? 'no' : 'si',
+    p.img || '',
+    Array.isArray(p.imgs) ? p.imgs.join('|') : '',
   ]);
   const csv = '\uFEFF' + [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -402,7 +404,7 @@ function openImportCsv() {
   const m = modal('Importar productos desde CSV / Excel', `
     <p class="hint" style="margin:0 0 12px">Sube un archivo <b>.csv</b> (puedes exportar el actual, editarlo en Excel y volver a subirlo). Si una fila tiene un <b>id</b> existente, actualiza el producto; si no, crea uno nuevo.</p>
     <div class="field"><label for="csvfile">Archivo CSV</label><input id="csvfile" type="file" accept=".csv,text/csv"></div>
-    <p class="hint">Columnas soportadas: <code>id, categoria, titulo, descripcion, precio, oferta, stock, oculto, pedible</code></p>
+    <p class="hint">Columnas soportadas: <code>id, categoria, titulo, descripcion, precio, oferta, stock, oculto, pedible, imagen, imagenes</code> (separa varias URLs en <code>imagenes</code> con <code>|</code>)</p>
     <div class="error-box" hidden></div>`, {
     footer: '<button class="btn ghost" data-dismiss>Cancelar</button><button class="btn" data-run>Importar</button>',
   });
@@ -428,13 +430,32 @@ function openImportCsv() {
       const cStock = idx(['stock']);
       const cHidden = idx(['oculto', 'hidden']);
       const cCart = idx(['pedible', 'carrito', 'cart']);
-      if (cTitle < 0 || cPrice < 0) throw new Error('Faltan las columnas obligatorias "titulo" y "precio".');
+      const cImg = idx(['imagen', 'img']);
+      const cImgs = idx(['imagenes', 'imgs', 'galeria']);
+      const hasOnlyIdAndImgs = cId >= 0 && (cImg >= 0 || cImgs >= 0) && (cTitle < 0 || cPrice < 0);
+      if (!hasOnlyIdAndImgs && (cTitle < 0 || cPrice < 0)) throw new Error('Faltan las columnas obligatorias "titulo" y "precio".');
 
       const catByName = new Map(S.cats.map((c) => [c.name.trim().toLowerCase(), c.id]));
       const prodById = new Map(S.prods.map((p) => [p.id, p]));
       let created = 0; let updated = 0;
 
       for (const r of rows.slice(1)) {
+        const existingId = cId >= 0 ? (r[cId] || '').trim() : '';
+        const imgUrl = cImg >= 0 ? safeUrl((r[cImg] || '').trim()) : '';
+        const extraImgs = cImgs >= 0
+          ? String(r[cImgs] || '').split('|').map((u) => safeUrl(u.trim())).filter(Boolean).slice(0, 10)
+          : null;
+
+        if (hasOnlyIdAndImgs) {
+          if (!existingId || !prodById.has(existingId)) continue;
+          const imgPatch = { updated_at: new Date().toISOString() };
+          if (cImg >= 0 && imgUrl) imgPatch.img = imgUrl;
+          if (extraImgs && extraImgs.length) imgPatch.imgs = extraImgs;
+          const { error } = await sb.from('products').update(imgPatch).eq('id', existingId);
+          if (!error) updated++;
+          continue;
+        }
+
         const title = (r[cTitle] || '').trim().slice(0, 200);
         const price = Number(String(r[cPrice] || '').replace(/[^\d.-]/g, ''));
         if (!title || Number.isNaN(price) || price < 0) continue;
@@ -459,17 +480,18 @@ function openImportCsv() {
         const cart = cCart >= 0 ? !/^(no|false|0)$/i.test(String(r[cCart] || '').trim()) : true;
         const description = cDesc >= 0 ? (r[cDesc] || '').trim().slice(0, 3000) : '';
 
-        const existingId = cId >= 0 ? (r[cId] || '').trim() : '';
         const patch = {
           title, description, price, offer, category_id: catId, stock, hidden, cart,
           updated_at: new Date().toISOString(),
         };
+        if (cImg >= 0 && imgUrl) patch.img = imgUrl;
+        if (extraImgs && extraImgs.length) patch.imgs = extraImgs;
         if (existingId && prodById.has(existingId)) {
           const { error } = await sb.from('products').update(patch).eq('id', existingId);
           if (!error) updated++;
         } else {
           const { error } = await sb.from('products').insert({
-            ...patch, id: slugId(title), img: '', imgs: [], options: [], position: S.prods.length + created,
+            ...patch, id: slugId(title), img: imgUrl || '', imgs: extraImgs || [], options: [], position: S.prods.length + created,
           });
           if (!error) created++;
         }
