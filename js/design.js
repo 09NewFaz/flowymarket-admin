@@ -980,6 +980,13 @@ function addBlockMenu() {
 // ================= Global =================
 function renderGlobal() {
   const d = draft.design;
+  d.topbar = {
+    announceOn: true,
+    announceText: 'Envíos a todo Chile · Seguimiento online disponible · Regalo incluido en cada par',
+    marqueeOn: true,
+    marqueeText: 'En cada par de zapatillas: calcetines + sticker + llavero GRATIS · Envíos a todo Chile con seguimiento · Calidades G5 · PK · LX garantizadas · Atención directa por WhatsApp',
+    ...(d.topbar || {}),
+  };
   const body = $('#ed-body');
   FONTS.forEach(loadFont);
   body.innerHTML = `
@@ -1013,6 +1020,12 @@ function renderGlobal() {
     <div class="ed-section"><h4>Ancho de la tienda</h4><div class="choice">
       ${[['compact', 'Compacto'], ['standard', 'Estándar'], ['wide', 'Amplio'], ['full', 'Completo']].map(([v, l]) => `<button data-width="${v}" class="${(d.width || 'standard') === v ? 'active' : ''}">${l}</button>`).join('')}
     </div></div>
+    <div class="ed-section"><h4>Barra superior y cinta (Marquee)</h4>
+      <div class="field"><label class="chk"><input type="checkbox" data-tb="announceOn" ${d.topbar.announceOn !== false ? 'checked' : ''}> Mostrar barra de anuncios superior</label></div>
+      <div class="field"><label>Texto de barra de anuncios</label><input class="input" data-tb="announceText" maxlength="160" value="${esc(d.topbar.announceText || '')}"></div>
+      <div class="field"><label class="chk"><input type="checkbox" data-tb="marqueeOn" ${d.topbar.marqueeOn !== false ? 'checked' : ''}> Mostrar cinta animada (Marquee)</label></div>
+      <div class="field"><label>Frases de la cinta <small>(separadas por ·)</small></label><textarea class="input" rows="3" data-tb="marqueeText" maxlength="400">${esc(d.topbar.marqueeText || '')}</textarea></div>
+    </div>
     <div class="ed-section"><h4>Fondo</h4>
       <div class="choice" style="margin-bottom:12px">
         <button data-bg="color" class="${d.background.type !== 'image' && d.background.type !== 'video' ? 'active' : ''}">Color</button>
@@ -1056,6 +1069,11 @@ function renderGlobal() {
   $$('[data-btn-style]', body).forEach((b) => (b.onclick = () => { d.buttonStyle = b.dataset.btnStyle; change({ rerender: true }); }));
   $$('[data-card-style]', body).forEach((b) => (b.onclick = () => { d.cardStyle = b.dataset.cardStyle; change({ rerender: true }); }));
   $$('[data-width]', body).forEach((b) => (b.onclick = () => { d.width = b.dataset.width; change({ rerender: true }); }));
+  $$('[data-tb]', body).forEach((el) => {
+    const k = el.dataset.tb;
+    if (el.type === 'checkbox') el.onchange = () => { d.topbar[k] = el.checked; change(); };
+    else el.oninput = () => { d.topbar[k] = el.value; change(); };
+  });
   $$('[data-bg]', body).forEach((b) => (b.onclick = () => { d.background.type = b.dataset.bg; change({ rerender: true }); }));
   $$('[data-bgtint]', body).forEach((b) => (b.onclick = () => { d.background.tint = b.dataset.bgtint; change({ rerender: true }); }));
   const ov = $('[data-bgov]', body);
